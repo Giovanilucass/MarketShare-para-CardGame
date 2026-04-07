@@ -25,6 +25,7 @@ Quais os tipos de mensagem e seus formatos?
 Basicamente todos os recursos que precisam ser acessados precisam ser nomeados, isto é, o API Gateway (o canal de comunicação entre microserviços), as instâncias dos microserviços (Auth/Login, Mercado, Inventário e Recompensas, bem como suas instâncias), as cópias de bancos de dados (O atual líder e as réplicas), o servidor do Event Bus, os tópicos de mensagem no event bus (para qual microserviço será a mensagem), os usuários, as cartas e as transações.
 
 **Qual esquema de nomeação?**
+
 Para o acesso aos microserviços a nomeação será de forma estruturada, isto é, ao enviar a mensagem para o Event Bus ele deverá saber qual microserviço vai ser acessado e qual função será executada naquele microserviço, além de qual instância daquele microserviço será usada. Portanto, teremos algo como: 
 	**\[serviço\].\[funcao\].\[id\]**
 	
