@@ -5,7 +5,7 @@ Projeto de Desenvolvimento de Sistemas Distribuídos, um MarketShare de cartas p
 A arquitetura escolhida é Pub/Sub com um servidor tolerante a falhas, ou seja, para o cliente será o mesmo que interagir com um servidor centralizado, mas na prática haverão diversos servidores que trocam mensagens de atualização entre si. Os publish e subscribes serão feitos pelos clientes para anunciar interesse por uma carta em específico e para colocar à venda uma carta em específico também.
 
 ![Arquitetura-Pub/Sub](https://github.com/Giovanilucass/MarketShare-para-CardGame/blob/main/Diagrama%20Arquitetura.png)
-
+- - -
 ### Comunicação
 Qual tipo de comunicação?
 - Dado a arquitetura Pub/Sub, as trocas de mensagem entre os clientes será assíncrona.
@@ -18,7 +18,7 @@ Quais os tipos de mensagem e seus formatos?
 
 1. Multicast:
 	- Temos requisições realizadas pelos clientes, em que irão para o servidor principal e serão passadas entre diferentes servidores.
-
+- - -
 ### Nomeação
 **Quais recursos precisam ser nomeados?**
 
@@ -35,7 +35,7 @@ Já para as cartas e os usuários o esquema será plano, poderemos armazená-los
 
 Para os serviços os nomes serão resolvidos pelo DNS interno do Docker, traduzindo o nome estruturado mostrado anteriormente para um endereço IP respectivo para o servidor do microserviço.
 O Event Bus também terá de resolver nomes, já que receberá mensagens estruturadas e também mensagens planas, ele terá que identificar essas mensagens e se comunicar com o serviço correto.
-
+- - -
 ### Processos
 **Faz sentido usar threads?**
 
