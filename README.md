@@ -48,3 +48,22 @@ Stateless, os servidores dos microserviços não guardam nenhum estado, se eles 
 **Faz sentido usar técnicas de virtualização?**
 
 Sim, iremos utilizar docker para ser possível executar todos os banco de dados e instâncias de microserviços, já que teremos alta replicação de cada um destes, o que resultaria em aproximadamente 20 instâncias executando em paralelo.
+
+- - -
+### Coordenação
+
+Será necessário algum mecanismo de sincronização?
+- Relógio Real
+	Iremos utilizar relógio real para sincronizar os eventos no leilão, isso é, dado uma carta publicada para venda no dia 01/02 às 15:00 que ficará em leilão por dois dias, deveremos saber o horário e o dia para conseguir finalizar o lance no leilão no dia 03/02 às 15:00.
+- Relógio Lógico
+	Iremos usar relógios lógicos no momento de finalizar uma transação/compra de carta, pois o "dinheiro" deverá ser descontado do usuário antes dele receber a carta.
+
+Será necessário empregar exclusão mútua? Qual algoritmo?
+	Sim, como utilizaremos diferentes instâncias do microserviço de market-place, duas réplicas podem querer vender a mesma carta ao mesmo tempo, porém isso não pode ser permitido. Portanto utilizaremos um sistema centralizado que resolve esse problema, o qual provavelmente será o event bus, pois ele já terá uma fila de processos em ordem, e a ordem estabelecida nele será respeitada por todos os microserviços.
+
+Sera necessário algum algoritmo de eleição? Qual algoritmo?
+	Para garantir sincronização dos banco de dados e para o event bus será necessário a eleição de um líder (o cluster do Event Bus). Utilizaremos um algoritmo de Anel (Ring) onde o nó de maior ID será o líder, e na eleição as mensagens serão enviadas em sequência (1->2->3->...).
+	O líder será o responsável por receber as publicações/atualizações e repassar em ordem para os outros nós.
+
+Se vai usar pub/sub, como será implementado?
+	O pub/sub utilizará um Event Bus, ou seja, será centralizado/clusterizado, ele possuíra uma tabela de roteamento que traduz tópicos (mercado.carta.rara) para IP's/Portas, os publish serão feitos ao IP do Event Bus por TCP, o Event Bus irá então ler o tópico recebido e enviar a resposta para os servidores inscritos nesse tópico, por meio de multicast. Provavelmente utilizaremos o middleware Kafka.
