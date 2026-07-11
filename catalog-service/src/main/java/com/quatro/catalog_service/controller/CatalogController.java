@@ -1,0 +1,67 @@
+package com.quatro.catalog_service.controller;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.quatro.catalog_service.domain.dto.CartaRequestDto;
+import com.quatro.catalog_service.domain.dto.CartaResponseDto;
+import com.quatro.catalog_service.service.CatalogService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/catalogo")
+@RequiredArgsConstructor
+public class CatalogController {
+
+    private final CatalogService catalogService;
+
+    // 1. Criar uma nova carta
+    // Rota: POST http://localhost:8080/api/catalogo
+    @PostMapping
+    public ResponseEntity<CartaResponseDto> criarCarta(@Valid @RequestBody CartaRequestDto requestDto) {
+        CartaResponseDto novaCarta = catalogService.criarCarta(requestDto);
+        
+        // Retorna HTTP 201 (Created) quando a inserção é bem-sucedida
+        return ResponseEntity.status(HttpStatus.CREATED).body(novaCarta);
+    }
+
+    // 2. Exibir e Filtrar cartas
+    // Rotas possíveis:
+    // GET http://localhost:8080/api/catalogo
+    // GET http://localhost:8080/api/catalogo?nome=Dragao
+    // GET http://localhost:8080/api/catalogo?raridade=Rara
+    @GetMapping
+    public ResponseEntity<List<CartaResponseDto>> listarOuFiltrarCartas(
+            @RequestParam(required = false) String nome,
+            @RequestParam(required = false) String raridade,
+            @RequestParam(required = false) String tipo) {
+        
+        List<CartaResponseDto> cartas = catalogService.filtrarCartas(nome, raridade, tipo);
+        
+        // Retorna HTTP 200 (OK) com a lista resultante (que pode ser vazia, mas não dará erro)
+        return ResponseEntity.ok(cartas);
+    }
+
+    // 3. Remover uma carta pelo ID
+    // Rota: DELETE http://localhost:8080/api/catalogo/123e4567-e89b-12d3-a456-426614174000
+    @DeleteMapping("/{cartaId}")
+    public ResponseEntity<Void> removerCarta(@PathVariable UUID cartaId) {
+        catalogService.removerCarta(cartaId);
+        
+        // Retorna HTTP 204 (No Content) avisando que deu certo, mas a resposta não tem corpo
+        return ResponseEntity.noContent().build();
+    }
+}
