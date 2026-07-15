@@ -4,9 +4,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.quatro.catalog_service.domain.dto.CartaEventDto;
 import com.quatro.catalog_service.domain.dto.CartaRequestDto;
 import com.quatro.catalog_service.domain.dto.CartaResponseDto;
 import com.quatro.catalog_service.domain.entity.cartas;
@@ -19,40 +22,62 @@ import lombok.RequiredArgsConstructor;
 public class CatalogService {
 
     private final CatalogRepository catalogRepository;
+    
+    // Injeta a ferramenta oficial do Spring para enviar mensagens pro Kafka
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    // 1. Criar uma nova carta
-    public CartaResponseDto criarCarta(CartaRequestDto requestDto) {
-        
-        cartas novaCarta = cartas.builder()
-                .nome(requestDto.getNome())
-                .tipo(requestDto.getTipo())
-                .raridade(requestDto.getRaridade())
-                .vida(requestDto.getVida())
-                .descricao(requestDto.getDescricao())
-                .imagemUrl(requestDto.getImagemUrl())
-                .build();
+    // Puxa o nome do tópico lá do seu application.properties
+    @Value("${topico.catalogo.carta-evento}")
+    private String topicoCartaEvento;
 
-        cartas cartaSalva = catalogRepository.save(novaCarta);
+    // 1. Criar ou Atualizar uma carta
+    public CartaResponseDto salvarOuAtualizarCarta(UUID id, CartaRequestDto requestDto) {
+        cartas cartaParaSalvar;
+        String acao; // Guardamos a ação para avisar o Kafka depois
 
-        return converterParaResponseDto(cartaSalva);
+        if (id != null) {
+            acao = "ATUALIZADA";
+            cartaParaSalvar = catalogRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Carta não encontrada para edição."));
+            
+            cartaParaSalvar.setNome(requestDto.getNome());
+            cartaParaSalvar.setTipo(requestDto.getTipo());
+            cartaParaSalvar.setRaridade(requestDto.getRaridade());
+            cartaParaSalvar.setVida(requestDto.getVida());
+            cartaParaSalvar.setDescricao(requestDto.getDescricao());
+            cartaParaSalvar.setImagemUrl(requestDto.getImagemUrl());
+        } else {
+            acao = "CRIADA";
+            cartaParaSalvar = cartas.builder()
+                    .nome(requestDto.getNome())
+                    .tipo(requestDto.getTipo())
+                    .raridade(requestDto.getRaridade())
+                    .vida(requestDto.getVida())
+                    .descricao(requestDto.getDescricao())
+                    .imagemUrl(requestDto.getImagemUrl())
+                    .build();
+        }
+
+        cartas cartaSalva = catalogRepository.save(cartaParaSalvar);
+        CartaResponseDto responseDto = converterParaResponseDto(cartaSalva);
+
+        // DISPARO PRO KAFKA: Avisa todo o sistema que a carta mudou!
+        enviarEventoKafka(acao, responseDto, responseDto.getId());
+
+        return responseDto;
     }
 
-    // 2. Exibir e Filtrar cartas (Nome, Raridade ou Tipo)
+    // 2. Exibir e Filtrar cartas (Permanece igual)
     public List<CartaResponseDto> filtrarCartas(String nome, String raridade, String tipo) {
         List<cartas> resultado;
 
-        // Chama exatamente os métodos do CatalogRepository
         if (nome != null && !nome.isBlank()) {
             resultado = catalogRepository.findByNome(nome);
-            
         } else if (raridade != null && !raridade.isBlank()) {
             resultado = catalogRepository.findByRaridade(raridade);
-            
         } else if (tipo != null && !tipo.isBlank()) {
             resultado = catalogRepository.findByTipo(tipo);
-            
         } else {
-            // Retorna o catálogo inteiro se nenhum filtro for passado
             resultado = catalogRepository.findAll();
         }
 
@@ -64,14 +89,16 @@ public class CatalogService {
     // 3. Remover uma carta
     @Transactional
     public void removerCarta(UUID cartaId) {
-        // Utilizando o método customizado que você adicionou no seu Repository
-        catalogRepository.deleteAllByCartaId(cartaId);
+        catalogRepository.deleteById(cartaId);
+        
+        // DISPARO PRO KAFKA: Avisa que a carta foi excluída
+        enviarEventoKafka("DELETADA", null, cartaId);
     }
 
-    // Método auxiliar para evitar repetição
+    // Método auxiliar de conversão (Permanece igual)
     private CartaResponseDto converterParaResponseDto(cartas carta) {
         return CartaResponseDto.builder()
-                .id(carta.getCartaId()) 
+                .id(carta.getCartaId())
                 .nome(carta.getNome())
                 .tipo(carta.getTipo())
                 .raridade(carta.getRaridade())
@@ -81,5 +108,19 @@ public class CatalogService {
                 .criadoEm(carta.getCriadoEm())
                 .atualizadoEm(carta.getAtualizadoEm())
                 .build();
+    }
+
+    // --- LÓGICA DO KAFKA ---
+    private void enviarEventoKafka(String acao, CartaResponseDto carta, UUID cartaId) {
+        CartaEventDto evento = CartaEventDto.builder()
+                .acao(acao)
+                .carta(carta)
+                .cartaId(cartaId)
+                .build();
+
+        // Envia para o tópico. O primeiro parâmetro é o tópico, o segundo é a chave (ID), o terceiro é a mensagem
+        kafkaTemplate.send(topicoCartaEvento, cartaId.toString(), evento);
+        
+        System.out.println("Enviado para o Kafka -> Ação: " + acao + " | ID da Carta: " + cartaId);
     }
 }

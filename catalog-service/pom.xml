@@ -11,9 +11,9 @@
 	</parent>
 	
 	<groupId>com.quatro</groupId>
-	<artifactId>inventory-service</artifactId>
+	<artifactId>catalog-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>inventory-service</name>
+	<name>catalog-service</name>
 	<description>Microserviço de gerenciamento de inventários e cartas do CardGame</description>
 
 	<properties>
@@ -58,6 +58,24 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+
+		<!-- Suporte para datas do Java 8 (LocalDateTime) no JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+		<!-- Biblioteca para conversão de Objetos em JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+		<!-- Kafka -->
+		<dependency>
+   			<groupId>org.springframework.kafka</groupId>
+    		<artifactId>spring-kafka</artifactId>
 		</dependency>
 	</dependencies>
 
